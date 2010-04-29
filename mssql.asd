@@ -13,4 +13,5 @@
             ((:file "packages")
              (:file "mssql" :depends-on ("packages"))
              (:file "connection" :depends-on ("mssql"))
-             (:file "query" :depends-on ("connection"))))))
+             (:file "query" :depends-on ("connection"))
+             (:file "execute" :depends-on ("connection"))))))

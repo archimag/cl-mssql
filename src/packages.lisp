@@ -15,4 +15,9 @@
            #:connect-toplevel
            #:disconnect-toplevel
            #:with-connection
+           
+           #:execute
+           #:with-transaction
+           #:rollback-transaction
+           #:commit-transaction
            #:query))
