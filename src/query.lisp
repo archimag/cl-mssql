@@ -160,36 +160,3 @@
                       (first format-info))))
       (%dbcancel %dbproc))))
 
-;; (defun query (query &key (connection *database*) (format :lists))
-;;   (let ((%dbproc (slot-value connection 'dbproc))
-;;         (cffi:*default-foreign-encoding* (slot-value connection 'external-format))
-;;         (field-name-p 
-;;         (column-name-keyword-p (member format '(:alists :plists :alist :plist)))
-;;         (field-plist-p (member format '(:plists :plist)))
-;;         (one-row-p (member format '(:plist :alist))))
-;;     (with-foreign-string (%query query)
-;;       (%dbcmd %dbproc %query))
-;;     (%dbsqlexec %dbproc)
-;;     (unwind-protect
-;;          (unless (= +no-more-results+ (%dbresults %dbproc))
-;;            (let ((collumns (iter (for x from 1 to (%dbnumcols %dbproc))
-;;                                  (collect (cons (let ((name (foreign-string-to-lisp (%dbcolname %dbproc x))e))
-;;                                                   (if column-name-keyword-p
-;;                                                       (field-name-s name)
-;;                                                       name))
-;;                                                 (%dbcoltype %dbproc x))))))
-;;              (iter (for rtc = (%dbnextrow %dbproc))
-;;                    (while (not (= rtc +no-more-rows+)))
-;;                    (collect (iter (for collumn in collumns)
-;;                                   (for i from 1)
-;;                                   (let ((value (sysdb-data-to-lisp (%dbdata %dbproc i)
-;;                                                                    (%dbcoltype %dbproc i)
-;;                                                                    (%dbdatlen %dbproc i))))
-;;                                     (when value
-;;                                       (cond
-;;                                         (field-plist-p
-;;                                          (collect (car collumn))
-;;                                          (collect value))
-;;                                         (t (collect (cons (car collumn)
-;;                                                           value)))))))))))
-;;       (%dbcancel %dbproc)))))
