@@ -85,34 +85,111 @@
                   #\-)))
     (intern name :keyword)))
 
+(defun one-row (%dbproc collumns get-row-fun)
+  (unless (= (%dbnextrow %dbproc)
+             +no-more-rows+)
+    (funcall get-row-fun %dbproc collumns)))
+
+(defun all-rows (%dbproc collumns get-row-fun)
+  (iter (for rtc = (%dbnextrow %dbproc))
+        (while (not (= rtc +no-more-rows+)))
+        (collect (funcall get-row-fun %dbproc collumns))))
+
+(defmacro define-row-reader (name (collumn value) &body body)
+  (let ((%dbproc (gensym))
+        (collumns (gensym))
+        (i (gensym)))
+    `(defun ,name (,%dbproc ,collumns)
+       (iter (for ,collumn in ,collumns)
+             (for ,i from 1)
+             (for ,value = (sysdb-data-to-lisp (%dbdata ,%dbproc ,i)
+                                               (%dbcoltype ,%dbproc ,i)
+                                               (%dbdatlen ,%dbproc ,i)))
+             ,@body))))
+
+  
+(define-row-reader read-plist-row (collumn value)
+  (collect collumn)
+  (collect value))
+
+(define-row-reader read-alist-row (collumn value)
+  (collect (cons collumn
+                 value)))
+
+(define-row-reader read-list-row (collumn value)
+  (collect value))
+
+(defun read-single-value (%dbproc collumns)
+  (declare (ignore collumns))
+  (sysdb-data-to-lisp (%dbdata %dbproc 1)
+                      (%dbcoltype %dbproc 1)
+                      (%dbdatlen %dbproc 1)))
+
+(defparameter *query-formats*
+  `((:lists read-list-row all-rows)
+    (:list read-list-row one-row)
+    (:rows read-list-row all-rows)
+    (:row read-list-row one-row)
+    (:alists read-alist-row all-rows keyword-collumn)
+    (:alist read-alist-row one-row keyword-collumn)
+    (:str-alists read-alist-row all-rows)
+    (:str-alist read-alist-row one-row)
+    (:plists read-plist-row all-rows keyword-collumn)
+    (:plist read-plist-row one-row keyword-collumn)
+    (:single read-single-value one-row)))
+
 (defun query (query &key (connection *database*) (format :lists))
   (let ((%dbproc (slot-value connection 'dbproc))
         (cffi:*default-foreign-encoding* (slot-value connection 'external-format))
-        (column-name-keyword-p (member format '(:alists :plists)))
-        (field-plist-p (member format '(:plists))))
+        (format-info (cdr (assoc format *query-formats*))))
+    (unless format-info
+      (error "Unknow query format: ~A" format))
     (with-foreign-string (%query query)
       (%dbcmd %dbproc %query))
     (%dbsqlexec %dbproc)
     (unwind-protect
          (unless (= +no-more-results+ (%dbresults %dbproc))
            (let ((collumns (iter (for x from 1 to (%dbnumcols %dbproc))
-                                 (collect (cons (let ((name (foreign-string-to-lisp (%dbcolname %dbproc x))e))
-                                                  (if column-name-keyword-p
+                                 (collect (let ((name (foreign-string-to-lisp (%dbcolname %dbproc x))e))
+                                                  (if (eql (third format-info) 'keyword-collumn)
                                                       (field-name-s name)
-                                                      name))
-                                                (%dbcoltype %dbproc x))))))
-             (iter (for rtc = (%dbnextrow %dbproc))
-                   (while (not (= rtc +no-more-rows+)))
-                   (collect (iter (for collumn in collumns)
-                                  (for i from 1)
-                                  (let ((value (sysdb-data-to-lisp (%dbdata %dbproc i)
-                                                                   (%dbcoltype %dbproc i)
-                                                                   (%dbdatlen %dbproc i))))
-                                    (when value
-                                      (cond
-                                        (field-plist-p
-                                         (collect (car collumn))
-                                         (collect value))
-                                        (t (collect (cons (car collumn)
-                                                          value)))))))))))
+                                                      name))))))
+             (funcall (second format-info)
+                      %dbproc
+                      collumns
+                      (first format-info))))
       (%dbcancel %dbproc))))
+
+;; (defun query (query &key (connection *database*) (format :lists))
+;;   (let ((%dbproc (slot-value connection 'dbproc))
+;;         (cffi:*default-foreign-encoding* (slot-value connection 'external-format))
+;;         (field-name-p 
+;;         (column-name-keyword-p (member format '(:alists :plists :alist :plist)))
+;;         (field-plist-p (member format '(:plists :plist)))
+;;         (one-row-p (member format '(:plist :alist))))
+;;     (with-foreign-string (%query query)
+;;       (%dbcmd %dbproc %query))
+;;     (%dbsqlexec %dbproc)
+;;     (unwind-protect
+;;          (unless (= +no-more-results+ (%dbresults %dbproc))
+;;            (let ((collumns (iter (for x from 1 to (%dbnumcols %dbproc))
+;;                                  (collect (cons (let ((name (foreign-string-to-lisp (%dbcolname %dbproc x))e))
+;;                                                   (if column-name-keyword-p
+;;                                                       (field-name-s name)
+;;                                                       name))
+;;                                                 (%dbcoltype %dbproc x))))))
+;;              (iter (for rtc = (%dbnextrow %dbproc))
+;;                    (while (not (= rtc +no-more-rows+)))
+;;                    (collect (iter (for collumn in collumns)
+;;                                   (for i from 1)
+;;                                   (let ((value (sysdb-data-to-lisp (%dbdata %dbproc i)
+;;                                                                    (%dbcoltype %dbproc i)
+;;                                                                    (%dbdatlen %dbproc i))))
+;;                                     (when value
+;;                                       (cond
+;;                                         (field-plist-p
+;;                                          (collect (car collumn))
+;;                                          (collect value))
+;;                                         (t (collect (cons (car collumn)
+;;                                                           value)))))))))))
+;;       (%dbcancel %dbproc)))))
