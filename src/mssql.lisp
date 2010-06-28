@@ -5,7 +5,6 @@
 ;;;;
 ;;;; Author: Moskvitin Andrey <archimag@gmail.com>
 
-
 (in-package :mssql)
 
 (define-foreign-library sybdb
