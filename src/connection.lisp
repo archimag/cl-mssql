@@ -120,15 +120,4 @@
   `(gp:with-garbage-pool ()
     (let ((*database* (gp:object-register (connect ,database ,user ,password ,host :external-format ,external-format))))
       ,@body)))
-
-
-
-
-
-
-
-
-
-
-
-        
+ 

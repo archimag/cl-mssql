@@ -39,7 +39,6 @@
 (define-sybdb-function ("dbdatlen" %dbdatlen) %DBINT
   (dbproc %DBPROCESS)
   (column :int))
-  
 
 (defcenum %syb-value-type
   (:syb-char  47)
@@ -66,7 +65,19 @@
   (:syb-moneyn  110)
   (:syb-datetimn  111))
 
-(defun sysdb-data-to-lisp (data type len)
+(define-sybdb-function ("dbconvert" %dbconvert) %DBINT
+  (dbproc %DBPROCESS)
+  (srctype %syb-value-type)
+  (src :pointer)
+  (srclen %DBINT)
+  (desttype %syb-value-type)
+  (dest :pointer)
+  (destlen %DBINT))
+
+
+(defconstant +numeric-buf-sz+ 45)
+
+(defun sysdb-data-to-lisp (%dbproc data type len)
   (if (> len 0)
       (case (foreign-enum-keyword '%syb-value-type type)
         ((:syb-varchar :syb-text) (foreign-string-to-lisp data :count len))
@@ -74,7 +85,13 @@
         (:syb-int4 (mem-ref data :int))
         (:syb-int8 (mem-ref data :int8))
         (:syb-flt8 (mem-ref data :double))
-        (otherwise (error "not supported type ~A" (foreign-enum-keyword '%syb-value-type type))))))
+        ((:syb-money :syb-money4 :syb-decimal :syb-numeric)
+         (with-foreign-pointer (%buf +numeric-buf-sz+)
+           (parse-number:parse-number
+            (foreign-string-to-lisp %buf
+                                    :count (%dbconvert %dbproc type data -1 :syb-char %buf +numeric-buf-sz+)))))
+        (otherwise (error "not supported type ~A"
+                          (foreign-enum-keyword '%syb-value-type type))))))
 
 (defun field-name-s (str)
   (let ((name (string-upcase str)))
@@ -102,11 +119,11 @@
     `(defun ,name (,%dbproc ,collumns)
        (iter (for ,collumn in ,collumns)
              (for ,i from 1)
-             (for ,value = (sysdb-data-to-lisp (%dbdata ,%dbproc ,i)
+             (for ,value = (sysdb-data-to-lisp ,%dbproc
+                                               (%dbdata ,%dbproc ,i)
                                                (%dbcoltype ,%dbproc ,i)
                                                (%dbdatlen ,%dbproc ,i)))
              ,@body))))
-
   
 (define-row-reader read-plist-row (collumn value)
   (collect collumn)
@@ -121,7 +138,8 @@
 
 (defun read-single-value (%dbproc collumns)
   (declare (ignore collumns))
-  (sysdb-data-to-lisp (%dbdata %dbproc 1)
+  (sysdb-data-to-lisp %dbproc
+                      (%dbdata %dbproc 1)
                       (%dbcoltype %dbproc 1)
                       (%dbdatlen %dbproc 1)))
 

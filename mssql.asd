@@ -6,7 +6,7 @@
 ;;;; Author: Moskvitin Andrey <archimag@gmail.com>
 
 (defsystem mssql
-  :depends-on (#:cffi #:iterate #:garbage-pools)
+  :depends-on (#:cffi #:iterate #:garbage-pools #:parse-number)
   :components
   ((:module :src
             :components
