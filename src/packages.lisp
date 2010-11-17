@@ -20,4 +20,7 @@
            #:with-transaction
            #:rollback-transaction
            #:commit-transaction
-           #:query))
+
+           #:query
+
+           #:call-remote-procedure))

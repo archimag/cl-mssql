@@ -19,8 +19,8 @@
 (defctype %LOGINREC :pointer)
 (defctype %RETCODE :int)
 (defctype %BYTE :uchar)
-(defctype %DBINT :int)
-
+(defctype %DBINT :int32)
+(defctype %DBSMALLINT :int16)
 
 (defconstant +FAIL+ 0)
 (defconstant +INT_CANCEL+ 2)

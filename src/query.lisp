@@ -5,7 +5,6 @@
 ;;;;
 ;;;; Author: Moskvitin Andrey <archimag@gmail.com>
 
-
 (in-package :mssql)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -82,9 +81,13 @@
       (case (foreign-enum-keyword '%syb-value-type type)
         ((:syb-varchar :syb-text) (foreign-string-to-lisp data :count len))
         (:syb-char (string-trim #(#\Space) (foreign-string-to-lisp data :count len)))
-        (:syb-int4 (mem-ref data :int))
+        ((:syb-int1 :syb-int2 :syb-int4) (mem-ref data :int))
         (:syb-int8 (mem-ref data :int8))
         (:syb-flt8 (mem-ref data :double))
+        (:syb-datetime
+         (with-foreign-pointer (%buf +numeric-buf-sz+)
+           (foreign-string-to-lisp %buf
+                                   :count (%dbconvert %dbproc type data -1 :syb-char %buf +numeric-buf-sz+))))
         ((:syb-money :syb-money4 :syb-decimal :syb-numeric)
          (with-foreign-pointer (%buf +numeric-buf-sz+)
            (parse-number:parse-number
@@ -156,25 +159,27 @@
     (:plist read-plist-row one-row keyword-collumn)
     (:single read-single-value one-row)))
 
+(defun get-results (%dbproc format &aux (format-info (cdr (assoc format *query-formats*))))
+  (unless format-info
+    (error "Unknow query format: ~A" format))
+  (unless (= +no-more-results+ (%dbresults %dbproc))
+    (let ((collumns (iter (for x from 1 to (%dbnumcols %dbproc))
+                          (collect (let ((name (foreign-string-to-lisp (%dbcolname %dbproc x))e))
+                                     (if (eql (third format-info) 'keyword-collumn)
+                                         (field-name-s name)
+                                         name))))))
+      (funcall (second format-info)
+               %dbproc
+               collumns
+               (first format-info)))))
+
 (defun query (query &key (connection *database*) (format :lists))
   (let ((%dbproc (slot-value connection 'dbproc))
-        (cffi:*default-foreign-encoding* (slot-value connection 'external-format))
-        (format-info (cdr (assoc format *query-formats*))))
-    (unless format-info
-      (error "Unknow query format: ~A" format))
+        (cffi:*default-foreign-encoding* (slot-value connection 'external-format)))
     (with-foreign-string (%query query)
       (%dbcmd %dbproc %query))
     (%dbsqlexec %dbproc)
     (unwind-protect
-         (unless (= +no-more-results+ (%dbresults %dbproc))
-           (let ((collumns (iter (for x from 1 to (%dbnumcols %dbproc))
-                                 (collect (let ((name (foreign-string-to-lisp (%dbcolname %dbproc x))e))
-                                                  (if (eql (third format-info) 'keyword-collumn)
-                                                      (field-name-s name)
-                                                      name))))))
-             (funcall (second format-info)
-                      %dbproc
-                      collumns
-                      (first format-info))))
+         (get-results %dbproc format)
       (%dbcancel %dbproc))))
 
