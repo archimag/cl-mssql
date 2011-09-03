@@ -8,7 +8,8 @@
 (in-package :mssql)
 
 (define-foreign-library sybdb
-  (:unix (:or "libsybdb.so"))
+  (:darwin "libsybdb.dylib")
+  (:unix "libsybdb.so")
   (t (:default "sybdb")))
 
 (with-simple-restart (skip "Skip loading foreign library tds.")
