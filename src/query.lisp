@@ -93,6 +93,11 @@
            (parse-number:parse-number
             (foreign-string-to-lisp %buf
                                     :count (%dbconvert %dbproc type data -1 :syb-char %buf +numeric-buf-sz+)))))
+        (:syb-image
+         (let ((vector (make-array len :element-type '(unsigned-byte 8))))
+           (dotimes (i len)
+             (setf (aref vector i) (mem-ref data :uchar i)))
+           vector))
         (otherwise (error "not supported type ~A"
                           (foreign-enum-keyword '%syb-value-type type))))))
 
