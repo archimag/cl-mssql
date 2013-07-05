@@ -104,9 +104,9 @@
 
 ;;; utility
 
-(defun cffi-string (str &optional (pool gp::*pool*))
+(defun cffi-string (str &optional (pool garbage-pools::*pool*))
   (if str
-      (gp:cleanup-register (foreign-string-alloc str)
-                           #'foreign-string-free
-                           pool)
+      (garbage-pools:cleanup-register (foreign-string-alloc str)
+                                      #'foreign-string-free
+                                      pool)
       (null-pointer)))

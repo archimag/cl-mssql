@@ -27,16 +27,16 @@
 (defun lisp-to-sysdb (val)
   (cond
     ((null val) (values (null-pointer) 0 :syb-char))
-    ((typep val 'fixnum) (values (gp:cleanup-register (foreign-alloc :int :initial-element val)
-                                                 #'foreign-free)
+    ((typep val 'fixnum) (values (garbage-pools:cleanup-register (foreign-alloc :int :initial-element val)
+                                                                 #'foreign-free)
                                  (foreign-type-size :int)
                                  :syb-int4))
-    ((typep val 'bignum) (values (gp:cleanup-register (foreign-alloc :long-long :initial-element val)
-                                                 #'foreign-free)
+    ((typep val 'bignum) (values (garbage-pools:cleanup-register (foreign-alloc :long-long :initial-element val)
+                                                                 #'foreign-free)
                                  (foreign-type-size :long-long)
                                  :syb-int8))
-    ((numberp val) (values (gp:cleanup-register (foreign-alloc :double :initial-element (coerce val 'double-float))
-                                                #'foreign-free)
+    ((numberp val) (values (garbage-pools:cleanup-register (foreign-alloc :double :initial-element (coerce val 'double-float))
+                                                           #'foreign-free)
                            (foreign-type-size :double)
                            :syb-flt8))
     (t (multiple-value-bind (ret length)
@@ -44,7 +44,7 @@
                                      val
                                      (write-to-string val))
                                  :null-terminated-p nil)
-         (values (gp:cleanup-register ret #'foreign-string-free)
+         (values (garbage-pools:cleanup-register ret #'foreign-string-free)
                  length
                  :syb-char)))))
 
@@ -53,7 +53,7 @@
         (cffi:*default-foreign-encoding* (slot-value *database* 'external-format)))
     (with-foreign-string (%name name)
       (%dbrpcinit %dbproc %name 0))
-    (gp:with-garbage-pool ()
+    (garbage-pools:with-garbage-pool ()
       (iter (for param in params)
             (multiple-value-bind (%val %size type) (lisp-to-sysdb param)
               (%dbrpcparam %dbproc (null-pointer) 0 type -1 %size %val)))
@@ -62,4 +62,4 @@
          (get-results %dbproc :plists)
       (%dbcancel %dbproc))))
 
-                
+

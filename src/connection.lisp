@@ -45,16 +45,16 @@
 
 (defun connect (database user password host &key (external-format :utf-8))
   (let ((cffi:*default-foreign-encoding* external-format))
-    (gp:with-garbage-pool ()
-      (let ((%login (gp:cleanup-register (%dblogin) #'%dbloginfree)))
+    (garbage-pools:with-garbage-pool ()
+      (let ((%login (garbage-pools:cleanup-register (%dblogin) #'%dbloginfree)))
         (iter (for (key . value) in (list (cons host 1)       ;; set host
                                           (cons user 2)       ;; set user
                                           (cons password 3)   ;; set password
                                           '("cl-mssql" . 5))) ;; set app
               (%dbsetlname %login (cffi-string key) value))
         
-        (let ((%dbproc (gp:cleanup-register (%tdsdbopen %login (cffi-string host) 1)
-                                            #'%dbclose)))
+        (let ((%dbproc (garbage-pools:cleanup-register (%tdsdbopen %login (cffi-string host) 1)
+                                                       #'%dbclose)))
           (%dbcmd %dbproc
                   (cffi-string (concatenate 'string
                                             "SET ARITHABORT ON;"
@@ -71,7 +71,7 @@
           (%dbsqlexec %dbproc)
           (%dbcancel %dbproc)
 
-          (gp:cancel-object-cleanup %dbproc)
+          (garbage-pools:cancel-object-cleanup %dbproc)
           (make-instance 'database-connection
                          :dbproc %dbproc
                          :external-format external-format))))))
@@ -89,12 +89,12 @@
 
 (defun disconnect (connection)
   (when (slot-value connection 'dbproc)
-      (%dbclose (slot-value connection 'dbproc))
-      (setf (slot-value connection 'dbproc) nil)))
+    (%dbclose (slot-value connection 'dbproc))
+    (setf (slot-value connection 'dbproc) nil)))
 
 ;;; garbage-pool support
 
-(gp:defcleanup database-connection #'disconnect)
+(garbage-pools:defcleanup database-connection #'disconnect)
 
 ;;; disconnnect-toplevel
 
@@ -117,7 +117,7 @@
 ;;; with-connection
 
 (defmacro with-connection ((database user password host &key (external-format :utf-8)) &body body)
-  `(gp:with-garbage-pool ()
-    (let ((*database* (gp:object-register (connect ,database ,user ,password ,host :external-format ,external-format))))
-      ,@body)))
- 
+  `(garbage-pools:with-garbage-pool ()
+     (let ((*database* (garbage-pools:object-register (connect ,database ,user ,password ,host :external-format ,external-format))))
+       ,@body)))
+
