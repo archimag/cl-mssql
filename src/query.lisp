@@ -132,7 +132,7 @@
                                                (%dbcoltype ,%dbproc ,i)
                                                (%dbdatlen ,%dbproc ,i)))
              ,@body))))
-  
+
 (define-row-reader read-plist-row (collumn value)
   (collect collumn)
   (collect value))
@@ -162,7 +162,8 @@
     (:str-alist read-alist-row one-row)
     (:plists read-plist-row all-rows keyword-collumn)
     (:plist read-plist-row one-row keyword-collumn)
-    (:single read-single-value one-row)))
+    (:single read-single-value one-row))
+  "Formats available for returning from QUERY.")
 
 (defun get-results (%dbproc format &aux (format-info (cdr (assoc format *query-formats*))))
   (unless format-info
@@ -179,6 +180,8 @@
                (first format-info)))))
 
 (defun query (query &key (connection *database*) (format :lists))
+  "Sends in `query` to `connection`, return the result as `format`.
+Format can be any keyword found in *query-formats*."
   (let ((%dbproc (slot-value connection 'dbproc))
         (cffi:*default-foreign-encoding* (slot-value connection 'external-format)))
     (with-foreign-string (%query query)
@@ -187,4 +190,3 @@
     (unwind-protect
          (get-results %dbproc format)
       (%dbcancel %dbproc))))
-
