@@ -44,6 +44,10 @@
   (dbproc %DBPROCESS))
 
 (defun connect (database user password host &key (external-format :utf-8))
+  "Connects to `database` on `host` using `user` and `password`.
+The external format defaults to :utf-8.
+
+A CLOS object of type 'database-connection is returned."
   (let ((cffi:*default-foreign-encoding* external-format))
     (garbage-pools:with-garbage-pool ()
       (let ((%login (garbage-pools:cleanup-register (%dblogin) #'%dbloginfree)))
@@ -52,7 +56,7 @@
                                           (cons password 3)   ;; set password
                                           '("cl-mssql" . 5))) ;; set app
               (%dbsetlname %login (cffi-string key) value))
-        
+
         (let ((%dbproc (garbage-pools:cleanup-register (%tdsdbopen %login (cffi-string host) 1)
                                                        #'%dbclose)))
           (%dbcmd %dbproc
@@ -79,6 +83,7 @@
 ;;; connect-p
 
 (defun connected-p (connection)
+  "Is `connection` available?"
   (let ((dbproc (slot-value connection 'dbproc)))
     (and dbproc (not (null-pointer-p dbproc)))))
 
@@ -88,6 +93,7 @@
   (dbproc %DBPROCESS))
 
 (defun disconnect (connection)
+  "Disconnect from `connection`."
   (when (slot-value connection 'dbproc)
     (%dbclose (slot-value connection 'dbproc))
     (setf (slot-value connection 'dbproc) nil)))
@@ -99,6 +105,7 @@
 ;;; disconnnect-toplevel
 
 (defun disconnect-toplevel ()
+  "Disconnects from *database*"
   (when *database* (connected-p *database*)
         (disconnect *database*)
         (setf *database* nil)))
@@ -106,6 +113,8 @@
 ;;; connect-toplevel
 
 (defun connect-toplevel (database user password host &key (external-format :utf-8))
+  "Connects to `database` on `host` using `user` and `password`.
+The connection is bound to the special variable *database*"
   (when (and *database* (connected-p *database*))
     (restart-case (error "Top-level database already connected.")
       (replace () :report "Replace it with a new connection." (disconnect-toplevel))
@@ -117,7 +126,8 @@
 ;;; with-connection
 
 (defmacro with-connection ((database user password host &key (external-format :utf-8)) &body body)
+  "Connects to `database` on `host` using `user` and `password`.
+Inside of `body`, the connection is bound to the special variable *database*"
   `(garbage-pools:with-garbage-pool ()
      (let ((*database* (garbage-pools:object-register (connect ,database ,user ,password ,host :external-format ,external-format))))
        ,@body)))
-
