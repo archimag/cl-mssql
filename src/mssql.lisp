@@ -9,6 +9,7 @@
 
 (define-foreign-library sybdb
   (:darwin "libsybdb.dylib")
+  (:linux (:or "libsybdb.so" "libsybdb.so.5"))
   (:unix "libsybdb.so")
   (t (:default "sybdb")))
 
