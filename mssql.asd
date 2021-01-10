@@ -11,7 +11,7 @@
   :version "0.1.0"
   :author "Andrey Moskvitin <archimag@gmail.com>"
   :homepage "https://github.com/archimag/cl-mssql"
-  :license "MIT"
+  :license "GPLv2"
   :depends-on ("cffi" "iterate" "garbage-pools" "parse-number")
   :components
   ((:module :src
