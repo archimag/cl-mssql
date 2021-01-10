@@ -8,7 +8,7 @@
 (defsystem "mssql"
   :description "A Common Lisp library for interacting with MS SQL Server
   databases."
-  :version "0.1.0"
+  :version "0.0.3"
   :author "Andrey Moskvitin <archimag@gmail.com>"
   :homepage "https://github.com/archimag/cl-mssql"
   :license "GPLv2"
