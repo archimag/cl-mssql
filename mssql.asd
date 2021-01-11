@@ -5,8 +5,14 @@
 ;;;;
 ;;;; Author: Moskvitin Andrey <archimag@gmail.com>
 
-(defsystem mssql
-  :depends-on (#:cffi #:iterate #:garbage-pools #:parse-number)
+(defsystem "mssql"
+  :description "A Common Lisp library for interacting with MS SQL Server
+  databases."
+  :version "0.0.3"
+  :author "Andrey Moskvitin <archimag@gmail.com>"
+  :homepage "https://github.com/archimag/cl-mssql"
+  :license "GPLv2"
+  :depends-on ("cffi" "iterate" "garbage-pools" "parse-number")
   :components
   ((:module :src
             :components
