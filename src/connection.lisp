@@ -51,10 +51,11 @@ A CLOS object of type 'database-connection is returned."
   (let ((cffi:*default-foreign-encoding* external-format))
     (garbage-pools:with-garbage-pool ()
       (let ((%login (garbage-pools:cleanup-register (%dblogin) #'%dbloginfree)))
-        (iter (for (key . value) in (list (cons host 1)       ;; set host
-                                          (cons user 2)       ;; set user
-                                          (cons password 3)   ;; set password
-                                          '("cl-mssql" . 5))) ;; set app
+        (iter (for (key . value) in (list (cons host 1)                         ;; set host
+                                          (cons user 2)                         ;; set user
+                                          (cons password 3)                     ;; set password
+                                          (cons (princ-to-string database) 14)  ;; set database
+                                          '("cl-mssql" . 5)))                   ;; set app
               (%dbsetlname %login (cffi-string key) value))
 
         (let ((%dbproc (garbage-pools:cleanup-register (%tdsdbopen %login (cffi-string host) 1)
