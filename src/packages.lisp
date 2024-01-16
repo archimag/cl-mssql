@@ -7,7 +7,10 @@
 
 (defpackage #:mssql
   (:use #:cl #:iter #:cffi)
-  (:export #:*database*
+  (:export #:init
+           #:exit
+
+           #:*database*
            #:database-connection
            #:connect
            #:connected-p
