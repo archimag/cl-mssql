@@ -17,6 +17,7 @@
   ((:module :src
             :components
             ((:file "packages")
+             (:file "init" :depends-on ("mssql"))
              (:file "mssql" :depends-on ("packages"))
              (:file "connection" :depends-on ("mssql"))
              (:file "query" :depends-on ("connection"))
