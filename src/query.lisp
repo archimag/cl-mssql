@@ -239,7 +239,7 @@
     (error "Unknow query format: ~A" format))
   (unless (= +no-more-results+ (%dbresults %dbproc))
     (let ((collumns (iter (for x from 1 to (%dbnumcols %dbproc))
-                          (collect (let ((name (foreign-string-to-lisp (%dbcolname %dbproc x))e))
+                          (collect (let ((name (foreign-string-to-lisp (%dbcolname %dbproc x))))
                                      (if (eql (third format-info) 'keyword-collumn)
                                          (field-name-s name)
                                          name))))))
