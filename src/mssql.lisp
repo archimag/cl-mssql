@@ -46,14 +46,14 @@
   (if (boundp '*error-message-list*)
       (progn
         (unless (null-pointer-p %dberrstr)
-          (push (foreign-string-to-lisp %dberrstr) *error-message-list*))
+          (push (format nil "[~A]~A" %dberr (foreign-string-to-lisp %dberrstr)) *error-message-list*))
         (unless (null-pointer-p %oserrstr)
-          (push (foreign-string-to-lisp %oserrstr) *error-message-list*)))
+          (push (format nil "[~A]~A" %oserr (foreign-string-to-lisp %oserrstr)) *error-message-list*)))
       (progn
         (unless (null-pointer-p %dberrstr)
-          (warn (foreign-string-to-lisp %dberrstr)))
+          (warn (format nil "[~A]~A" %dberr (foreign-string-to-lisp %dberrstr))))
         (unless (null-pointer-p %oserrstr)
-          (warn (foreign-string-to-lisp %oserrstr)))))
+          (warn (format nil "[~A]~A" %oserr (foreign-string-to-lisp %oserrstr))))))
   +INT_CANCEL+)
 
 (%dberrhandle (callback %error-handler))
@@ -69,8 +69,8 @@
   (declare (ignore %dbproc %severity %msgno %msgstate %svrname %proc %line))
   (unless (null-pointer-p %msgtext)
     (if (boundp '*error-message-list*)
-        (push (foreign-string-to-lisp %msgtext) *error-message-list*)
-        (warn (foreign-string-to-lisp %msgtext))))
+        (push (format nil "[~A]~A" %msgno (foreign-string-to-lisp %msgtext)) *error-message-list*)
+        (warn (format nil "[~A]~A" %msgno (foreign-string-to-lisp %msgtext)))))
   0)
 
 (%dbmsghandle (callback %message-handler))
