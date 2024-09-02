@@ -259,3 +259,64 @@ Format can be any keyword found in *query-formats*."
     (unwind-protect
          (get-results %dbproc format)
       (%dbcancel %dbproc))))
+
+(defmacro foreach-rows-from-query ((row query &optional result
+                                              &key (connection '*database*))
+                                   &optional before-loop
+                                   &rest loop-body)
+  "Sends in `query` to `connection`, and iterate over each row of db result set.
+In `before-loop`, you can get the headers. It is executed before the body of iteration.
+In `loop-body`, you can get the headers and the column values. It is the body of iteration. It uses `do`.
+In `result`, return the result.
+Local Function:
+  `row-MAX-CIDX`:   Gets the maximum value of the column index.
+  `row-CIDX->NAME`: Gets the column name from the column index.
+  `row-CIDX->VAL`:  Gets the value from the column index of the current row(only uses in `loop-body`).
+Local Variable:
+  `row`: `before-loop` - 0;
+         `loop-body`   - current row number;
+         `result`      - row number at last loop."
+  (let ((g-query      (gensym))
+        (g-connection (gensym))
+        (%dbproc      (gensym "%"))
+        (%query       (gensym "%")))
+    (if (not (symbolp row))
+        (error "row: ~A must be a symbol." row))
+    `(let* ((,g-query      ,query)
+            (,g-connection ,connection)
+            (,%dbproc                        (slot-value ,g-connection 'dbproc))
+            (cffi:*default-foreign-encoding* (slot-value ,g-connection 'external-format)))
+       (with-foreign-string (,%query ,g-query)
+         (%dbcmd ,%dbproc ,%query))
+       (%dbsqlexec ,%dbproc)
+       (unwind-protect
+         ,(let* ((row-name (symbol-name row))
+                 (fun-col-max-idx   (intern (concatenate 'string row-name "-MAX-CIDX")))
+                 (fun-col-idx->name (intern (concatenate 'string row-name "-CIDX->NAME")))
+                 (fun-col-idx->val  (intern (concatenate 'string row-name "-CIDX->VAL"))))
+            `(let ((,row 0))
+               (labels ((,fun-col-max-idx () (%dbnumcols ,%dbproc))
+                        (,fun-col-idx->name (idx)
+                          (if (and (>= idx 1) (<= idx (%dbnumcols ,%dbproc)))
+                              (foreign-string-to-lisp (%dbcolname ,%dbproc idx))
+                              (error "Column Index: ~A must be in the range of 1 to ~A."
+                                     idx (%dbnumcols ,%dbproc)))))
+                 ,before-loop
+                 (unless (= +no-more-results+ (%dbresults ,%dbproc))
+                   (labels ((,fun-col-idx->val (idx)
+                              (if (and (>= idx 1) (<= idx (%dbnumcols ,%dbproc)))
+                                  (sysdb-data-to-lisp ,%dbproc
+                                                      (%dbdata    ,%dbproc idx)
+                                                      (%dbcoltype ,%dbproc idx)
+                                                      (%dbdatlen  ,%dbproc idx))
+                                  (error "Column Index: ~A must be in the range of 1 to ~A."
+                                         idx (%dbnumcols ,%dbproc)))))
+                     ,(let ((rtc (gensym))
+                            (i   (gensym)))
+                        `(do ((,rtc (%dbnextrow ,%dbproc) (%dbnextrow ,%dbproc))
+                              (,i 1 (1+ ,i)))
+                             ((= ,rtc +no-more-rows+))
+                             (setf ,row ,i)
+                             ,@loop-body))))
+	         ,result)))
+         (%dbcancel ,%dbproc)))))

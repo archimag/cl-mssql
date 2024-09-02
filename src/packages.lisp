@@ -25,5 +25,6 @@
            #:commit-transaction
 
            #:query
+           #:foreach-rows-from-query
 
            #:call-remote-procedure))
